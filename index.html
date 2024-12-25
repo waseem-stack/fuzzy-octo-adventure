@@ -1,105 +1,151 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js" defer></script>
-    <style>
-      body {
-        width: 800px;
-        margin: 0 auto;
-        font-family: Roboto, sans-serif;
-        text-align: center;
-      }
-      .section {
-        padding: 20px; 
-        margin: 20px;
-        border: 2px #AEFF6A solid; 
-        border-radius: 8px;
-      }
-      #tonconnect-buttons > button {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        font-size: 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        background-color: #4CAF50;
-        color: white;
-      }
-      #tonconnect-buttons > button.featured {
-        font-weight: bold;
-        background-color: #2196F3;
-      }
-      #tonconnect-buttons > button:disabled {
-        background-color: #ddd;
-        cursor: not-allowed;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Connect to TON Wallet</h1>
-    <div class="section" id="tonconnect-buttons">
-      <!-- Buttons for connecting to wallets will be dynamically added here -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/ionicons/ionicons.css">
+  <title>TON Wallet Connection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1a1a1a;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    .wallet-container {
+      background: linear-gradient(to right, #457576bf, #ef44ee, #5c487d9e);
+      border-radius: 15px;
+      padding: 1px;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .wallet-button {
+      display: flex;
+      align-items: center;
+      background-color: #319cdf;
+      border: none;
+      border-radius: 14px;
+      padding: 10px 15px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .wallet-button img {
+      width: 30px;
+      margin-right: 10px;
+    }
+    .wallet-button h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .wallet-button span {
+      font-size: 14px;
+      color: #ddd;
+    }
+    .wallet-button .icon {
+      margin-left: auto;
+    }
+    .disconnect-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .disconnect-modal .modal-content {
+      background: #2d2d2d;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .disconnect-modal button {
+      background: #eb4848;
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wallet-container">
+    <button id="walletButton" class="wallet-button">
+      <img src="/wallet.webp" alt="Wallet Icon">
+      <div>
+        <h4 id="walletStatus">Connect your TON wallet</h4>
+        <span id="walletAddress"></span>
+      </div>
+      <ion-icon id="walletIcon" class="icon" name="chevron-forward-outline"></ion-icon>
+    </button>
+  </div>
+
+  <div id="disconnectModal" class="disconnect-modal" style="display: none;">
+    <div class="modal-content">
+      <p>Are you sure you want to disconnect? Only connected wallets are eligible for airdrop.</p>
+      <button id="disconnectButton">Disconnect Wallet</button>
     </div>
-    
-    <script>
-      document.addEventListener("DOMContentLoaded", async () => {
-        const connector = new TonConnectSDK.TonConnect();
-        const walletsList = await connector.getWallets();
+  </div>
 
-        const buttonsContainer = document.getElementById('tonconnect-buttons');
+  <script>
+    const walletButton = document.getElementById('walletButton');
+    const walletStatus = document.getElementById('walletStatus');
+    const walletAddress = document.getElementById('walletAddress');
+    const walletIcon = document.getElementById('walletIcon');
+    const disconnectModal = document.getElementById('disconnectModal');
+    const disconnectButton = document.getElementById('disconnectButton');
 
-        // Handle connection status updates
-        const unsubscribe = connector.onStatusChange(walletInfo => {
-          console.log('Connection status:', walletInfo);
-          if (walletInfo?.address) {
-            alert(`Wallet Connected: ${walletInfo.address}`);
+    let isConnected = false;
+    let tonConnect;
+
+    async function initializeTonConnect() {
+      tonConnect = new TonConnectSDK.TonConnect();
+
+      walletButton.addEventListener('click', async () => {
+        if (isConnected) {
+          // Show disconnect modal
+          disconnectModal.style.display = 'flex';
+        } else {
+          try {
+            const wallet = await tonConnect.connect();
+            walletStatus.innerText = 'Wallet Connected';
+            walletAddress.innerText = wallet.address;
+            walletIcon.name = 'checkmark-circle-outline';
+            isConnected = true;
+          } catch (error) {
+            console.error('Connection failed:', error);
+            alert('Failed to connect to wallet.');
           }
-        });
-
-        // Create buttons dynamically for available wallets
-        for (const wallet of walletsList) {
-          const connectButton = document.createElement('button');
-          connectButton.innerText = `Connect with ${wallet.name}`;
-
-          // Highlight embedded wallets
-          if (wallet.embedded) {
-            connectButton.classList.add('featured');
-          }
-
-          if (wallet.injected || wallet.embedded) {
-            // Handle injected or embedded wallet connections
-            connectButton.onclick = async () => {
-              connectButton.disabled = true;
-              try {
-                await connector.connect({ jsBridgeKey: wallet.jsBridgeKey });
-              } catch (error) {
-                console.error('Connection failed:', error);
-                alert('Connection failed. Please try again.');
-                connectButton.disabled = false;
-              }
-            };
-          } else if (wallet.bridgeUrl) {
-            // Handle bridge wallet connections
-            connectButton.onclick = () => {
-              connectButton.disabled = true;
-              const connectionLink = connector.connect({
-                universalLink: wallet.universalLink,
-                bridgeUrl: wallet.bridgeUrl,
-              });
-              console.log('Connection link:', connectionLink);
-              window.open(connectionLink, '_blank');
-            };
-          } else {
-            // Disable unsupported wallets
-            connectButton.disabled = true;
-          }
-
-          buttonsContainer.appendChild(connectButton);
         }
       });
-    </script>
-  </body>
+
+      disconnectButton.addEventListener('click', () => {
+        tonConnect.disconnect();
+        walletStatus.innerText = 'Connect your TON wallet';
+        walletAddress.innerText = '';
+        walletIcon.name = 'chevron-forward-outline';
+        isConnected = false;
+        disconnectModal.style.display = 'none';
+      });
+
+      disconnectModal.addEventListener('click', (e) => {
+        if (e.target === disconnectModal) {
+          disconnectModal.style.display = 'none';
+        }
+      });
+    }
+
+    initializeTonConnect();
+  </script>
+</body>
 </html>

@@ -97,55 +97,73 @@
     </div>
   </div>
 
-  <script>
-    const walletButton = document.getElementById('walletButton');
-    const walletStatus = document.getElementById('walletStatus');
-    const walletAddress = document.getElementById('walletAddress');
-    const walletIcon = document.getElementById('walletIcon');
-    const disconnectModal = document.getElementById('disconnectModal');
-    const disconnectButton = document.getElementById('disconnectButton');
+<script>
+  const walletButton = document.getElementById('walletButton');
+  const walletStatus = document.getElementById('walletStatus');
+  const walletAddress = document.getElementById('walletAddress');
+  const walletIcon = document.getElementById('walletIcon');
+  const disconnectModal = document.getElementById('disconnectModal');
+  const disconnectButton = document.getElementById('disconnectButton');
 
-    let isConnected = false;
-    let tonConnect;
+  let isConnected = false;
+  let tonConnect;
 
-    async function initializeTonConnect() {
-      tonConnect = new TonConnectSDK.TonConnect();
+  async function initializeTonConnect() {
+    console.log('Initializing TonConnect...');
+    tonConnect = new TonConnectSDK.TonConnect();
 
-      walletButton.addEventListener('click', async () => {
-        if (isConnected) {
-          // Show disconnect modal
-          disconnectModal.style.display = 'flex';
-        } else {
-          try {
-            const wallet = await tonConnect.connect();
-            walletStatus.innerText = 'Wallet Connected';
-            walletAddress.innerText = wallet.address;
-            walletIcon.name = 'checkmark-circle-outline';
-            isConnected = true;
-          } catch (error) {
-            console.error('Connection failed:', error);
-            alert('Failed to connect to wallet.');
+    walletButton.addEventListener('click', async () => {
+      console.log('Wallet button clicked. Connected:', isConnected);
+      if (isConnected) {
+        // Show disconnect modal
+        disconnectModal.style.display = 'flex';
+      } else {
+        try {
+          const wallets = await tonConnect.getWallets();
+          console.log('Available wallets:', wallets);
+
+          if (wallets.length === 0) {
+            alert('No wallets detected. Please install a TON wallet.');
+            return;
           }
-        }
-      });
 
-      disconnectButton.addEventListener('click', () => {
+          const wallet = await tonConnect.connect();
+          console.log('Connected wallet:', wallet);
+
+          walletStatus.innerText = 'Wallet Connected';
+          walletAddress.innerText = wallet.address;
+          walletIcon.name = 'checkmark-circle-outline';
+          isConnected = true;
+        } catch (error) {
+          console.error('Connection failed:', error);
+          alert('Failed to connect to wallet.');
+        }
+      }
+    });
+
+    disconnectButton.addEventListener('click', () => {
+      try {
         tonConnect.disconnect();
+        console.log('Disconnected successfully');
         walletStatus.innerText = 'Connect your TON wallet';
         walletAddress.innerText = '';
         walletIcon.name = 'chevron-forward-outline';
         isConnected = false;
         disconnectModal.style.display = 'none';
-      });
+      } catch (error) {
+        console.error('Disconnection failed:', error);
+      }
+    });
 
-      disconnectModal.addEventListener('click', (e) => {
-        if (e.target === disconnectModal) {
-          disconnectModal.style.display = 'none';
-        }
-      });
-    }
+    disconnectModal.addEventListener('click', (e) => {
+      if (e.target === disconnectModal) {
+        disconnectModal.style.display = 'none';
+      }
+    });
+  }
 
-    initializeTonConnect();
-  </script>
+  initializeTonConnect();
+</script>
+
 </body>
 </html>
